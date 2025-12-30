@@ -1,0 +1,276 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Chat Completions API",
+    "version": "1.0.0",
+    "description": "A simplified chat API similar to OpenAI/Anthropic - use for exercises"
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com/v1"
+    }
+  ],
+  "paths": {
+    "/chat/completions": {
+      "post": {
+        "operationId": "createChatCompletion",
+        "summary": "Create a chat completion",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChatCompletionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chat completion response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChatCompletion" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChatCompletionRequest": {
+        "type": "object",
+        "description": "Request for a chat completion",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "Model to use for completion"
+          },
+          "messages": {
+            "type": "array",
+            "description": "Conversation messages",
+            "items": { "$ref": "#/components/schemas/Message" }
+          },
+          "max_tokens": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Maximum tokens to generate"
+          },
+          "temperature": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2,
+            "default": 1,
+            "description": "Sampling temperature"
+          },
+          "stream": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to stream responses"
+          },
+          "tools": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Tool" },
+            "nullable": true
+          },
+          "response_format": {
+            "$ref": "#/components/schemas/ResponseFormat"
+          }
+        },
+        "required": ["model", "messages"]
+      },
+      "Message": {
+        "type": "object",
+        "description": "A chat message",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": ["system", "user", "assistant", "tool"],
+            "description": "Role of the message author"
+          },
+          "content": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/ContentPart" }
+              }
+            ],
+            "description": "Message content"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional name for the participant"
+          },
+          "tool_calls": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ToolCall" },
+            "nullable": true
+          },
+          "tool_call_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "For tool role messages, the ID of the tool call"
+          }
+        },
+        "required": ["role", "content"]
+      },
+      "ContentPart": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "enum": ["text"] },
+              "text": { "type": "string" }
+            },
+            "required": ["type", "text"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "enum": ["image_url"] },
+              "image_url": {
+                "type": "object",
+                "properties": {
+                  "url": { "type": "string", "format": "uri" },
+                  "detail": { "type": "string", "enum": ["auto", "low", "high"] }
+                },
+                "required": ["url"]
+              }
+            },
+            "required": ["type", "image_url"]
+          }
+        ]
+      },
+      "Tool": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["function"]
+          },
+          "function": { "$ref": "#/components/schemas/FunctionDefinition" }
+        },
+        "required": ["type", "function"]
+      },
+      "FunctionDefinition": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Function name"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "parameters": {
+            "type": "object",
+            "description": "JSON Schema for function parameters"
+          }
+        },
+        "required": ["name"]
+      },
+      "ToolCall": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string", "enum": ["function"] },
+          "function": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "arguments": { "type": "string" }
+            },
+            "required": ["name", "arguments"]
+          }
+        },
+        "required": ["id", "type", "function"]
+      },
+      "ResponseFormat": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "enum": ["text"] }
+            },
+            "required": ["type"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "enum": ["json_object"] }
+            },
+            "required": ["type"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "enum": ["json_schema"] },
+              "json_schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "strict": { "type": "boolean" },
+                  "schema": { "type": "object" }
+                },
+                "required": ["name", "schema"]
+              }
+            },
+            "required": ["type", "json_schema"]
+          }
+        ]
+      },
+      "ChatCompletion": {
+        "type": "object",
+        "description": "A chat completion response",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier"
+          },
+          "object": {
+            "type": "string",
+            "enum": ["chat.completion"]
+          },
+          "created": {
+            "type": "integer",
+            "description": "Unix timestamp"
+          },
+          "model": {
+            "type": "string"
+          },
+          "choices": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Choice" }
+          },
+          "usage": { "$ref": "#/components/schemas/Usage" }
+        },
+        "required": ["id", "object", "created", "model", "choices"]
+      },
+      "Choice": {
+        "type": "object",
+        "properties": {
+          "index": { "type": "integer" },
+          "message": { "$ref": "#/components/schemas/Message" },
+          "finish_reason": {
+            "type": "string",
+            "enum": ["stop", "length", "tool_calls", "content_filter"],
+            "nullable": true
+          }
+        },
+        "required": ["index", "message"]
+      },
+      "Usage": {
+        "type": "object",
+        "properties": {
+          "prompt_tokens": { "type": "integer" },
+          "completion_tokens": { "type": "integer" },
+          "total_tokens": { "type": "integer" }
+        },
+        "required": ["prompt_tokens", "completion_tokens", "total_tokens"]
+      }
+    }
+  }
+}
